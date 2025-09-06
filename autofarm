@@ -1,0 +1,295 @@
+-- 📌 Services
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local HttpService = game:GetService("HttpService")
+local TeleportService = game:GetService("TeleportService")
+
+----------------------------------------------------------------
+-- 🎬 INTRO GUI
+----------------------------------------------------------------
+local intro = Instance.new("ScreenGui")
+intro.Name = "GraiIntro"
+intro.IgnoreGuiInset = true
+intro.ResetOnSpawn = false
+intro.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- nền mờ
+local bg = Instance.new("Frame", intro)
+bg.Size = UDim2.new(1,0,1,0)
+bg.BackgroundColor3 = Color3.new(0,0,0)
+bg.BackgroundTransparency = 0.3
+
+-- logo
+local logo = Instance.new("ImageLabel", intro)
+logo.AnchorPoint = Vector2.new(0.5,0.5)
+logo.Position = UDim2.new(0.5,0,0.5,0)
+logo.Size = UDim2.new(0,0,0,0)
+logo.BackgroundTransparency = 1
+logo.Image = "http://www.roblox.com/asset/?id=77111304194141"
+logo.ImageTransparency = 1
+
+TweenService:Create(logo, TweenInfo.new(1.5, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), {
+    Size = UDim2.new(0,200,0,200),
+    ImageTransparency = 0
+}):Play()
+
+-- xoay logo
+task.spawn(function()
+    while logo.Parent do
+        logo.Rotation += 0.5
+        task.wait(0.01)
+    end
+end)
+
+-- text
+local msg = Instance.new("TextLabel", intro)
+msg.AnchorPoint = Vector2.new(0.5,0)
+msg.Position = UDim2.new(0.5,0,0.75,0)
+msg.Size = UDim2.new(0,600,0,80)
+msg.BackgroundTransparency = 1
+msg.Text = "Grai Hub"
+msg.TextColor3 = Color3.fromRGB(0,255,255)
+msg.Font = Enum.Font.GothamBlack
+msg.TextScaled = true
+msg.TextStrokeTransparency = 0
+msg.TextStrokeColor3 = Color3.new(0,0,0)
+msg.TextTransparency = 1
+
+TweenService:Create(msg, TweenInfo.new(1.2), {TextTransparency=0}):Play()
+
+-- fade out
+task.wait(4)
+TweenService:Create(logo, TweenInfo.new(1.2), {ImageTransparency=1}):Play()
+TweenService:Create(msg, TweenInfo.new(1.2), {TextTransparency=1}):Play()
+TweenService:Create(bg, TweenInfo.new(1.2), {BackgroundTransparency=1}):Play()
+task.wait(1.5)
+intro:Destroy()
+
+----------------------------------------------------------------
+-- 🌌 DARK UI (tiêu đề)
+----------------------------------------------------------------
+if CoreGui:FindFirstChild("Grai_Dark_UI") then CoreGui.Grai_Dark_UI:Destroy() end
+local gui = Instance.new("ScreenGui", CoreGui)
+gui.Name = "Grai_Dark_UI"
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0.45,0,0.1,0)
+frame.Position = UDim2.new(0.5,0,0.15,0)
+frame.AnchorPoint = Vector2.new(0.5,0.5)
+frame.BackgroundColor3 = Color3.fromRGB(20,20,35)
+frame.BackgroundTransparency = 1
+frame.Visible = false
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0,25)
+
+local stroke = Instance.new("UIStroke", frame)
+stroke.Thickness = 0
+stroke.Color = Color3.fromRGB(170,0,255)
+
+local glow = Instance.new("ImageLabel", frame)
+glow.Size = UDim2.new(1.4,0,2,0)
+glow.Position = UDim2.new(-0.2,0,-0.5,0)
+glow.BackgroundTransparency = 1
+glow.Image = "rbxassetid://4996891970"
+glow.ImageColor3 = Color3.fromRGB(170,0,255)
+glow.ImageTransparency = 1
+glow.ZIndex = -1
+
+local gradient = Instance.new("UIGradient", frame)
+gradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(25,0,40)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(10,0,25))
+}
+gradient.Rotation = 45
+
+local text = Instance.new("TextLabel", frame)
+text.Size = UDim2.new(1,0,1,0)
+text.BackgroundTransparency = 1
+text.Text = "Grai Hub - Auto Collect Chest"
+text.TextColor3 = Color3.fromRGB(200,0,255)
+text.Font = Enum.Font.GothamBlack
+text.TextScaled = true
+text.TextTransparency = 1
+
+-- hiệu ứng hiện
+frame.Visible = true
+TweenService:Create(frame, TweenInfo.new(1, Enum.EasingStyle.Back), {BackgroundTransparency = 0.3}):Play()
+TweenService:Create(text, TweenInfo.new(1), {TextTransparency=0}):Play()
+TweenService:Create(stroke, TweenInfo.new(1), {Thickness=2}):Play()
+TweenService:Create(glow, TweenInfo.new(1), {ImageTransparency=0.55}):Play()
+
+----------------------------------------------------------------
+-- 🌍 AUTO CHEST + AUTO HOP
+----------------------------------------------------------------
+local PlaceID = game.PlaceId
+local AllIDs = {}
+local nextCursor
+local file = "NotSameServers.json"
+
+-- load file lưu server đã join
+pcall(function()
+    if isfile(file) then
+        AllIDs = HttpService:JSONDecode(readfile(file))
+    end
+end)
+
+-- reset theo giờ
+local actualHour = os.date("!*t").hour
+if type(AllIDs[1]) == "number" and AllIDs[1] ~= actualHour then
+    AllIDs = {actualHour}
+    writefile(file, HttpService:JSONEncode(AllIDs))
+elseif type(AllIDs[1]) ~= "number" then
+    table.insert(AllIDs,1,actualHour)
+    writefile(file, HttpService:JSONEncode(AllIDs))
+end
+
+-- tìm server mới
+local function TPReturner()
+    local url = "https://games.roblox.com/v1/games/"..PlaceID.."/servers/Public?sortOrder=Asc&limit=100"
+    if nextCursor then url = url .. "&cursor=" .. nextCursor end
+    local servers = HttpService:JSONDecode(game:HttpGet(url))
+    nextCursor = servers.nextPageCursor
+
+    for _,v in ipairs(servers.data) do
+        if v.playing < v.maxPlayers then
+            local id = tostring(v.id)
+            if not table.find(AllIDs,id) then
+                table.insert(AllIDs,id)
+                writefile(file,HttpService:JSONEncode(AllIDs))
+                pcall(function()
+                    TeleportService:TeleportToPlaceInstance(PlaceID,id,LocalPlayer)
+                end)
+                task.wait(4)
+            end
+        end
+    end
+end
+
+-- lấy chest
+local function getChar()
+    return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+end
+local function getChests()
+    local t = {}
+    for _,obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("Part") and obj.Name:lower():find("chest") and obj:FindFirstChild("TouchInterest") then
+            table.insert(t,obj)
+        end
+    end
+    local root = getChar():WaitForChild("HumanoidRootPart",5)
+    table.sort(t,function(a,b)
+        return (root.Position-a.Position).Magnitude < (root.Position-b.Position).Magnitude
+    end)
+    return t
+end
+local function TeleportChest(cf)
+    local root = getChar().HumanoidRootPart
+    for _,v in pairs(getChar():GetChildren()) do
+        if v:IsA("BasePart") then v.CanCollide = false end
+    end
+    root.CFrame = cf + Vector3.new(0,3,0)
+end
+
+task.spawn(function()
+    while task.wait(1.5) do
+        local chests = getChests()
+        if #chests > 0 then TeleportChest(chests[1].CFrame) end
+    end
+end)
+
+-- auto hop sau 3 phút
+task.delay(180,function()
+    while task.wait(5) do
+        pcall(TPReturner)
+    end
+end)
+
+----------------------------------------------------------------
+-- ⚙️ TOGGLE UI
+----------------------------------------------------------------
+if CoreGui:FindFirstChild("Grai_Toggles") then CoreGui.Grai_Toggles:Destroy() end
+local toggles = Instance.new("ScreenGui", CoreGui)
+toggles.Name = "Grai_Toggles"
+
+-- hàm tạo toggle
+local function createToggle(name, order, default, callback)
+    local y = (order-1) * 60
+    local label = Instance.new("TextLabel", toggles)
+    label.Size = UDim2.new(0,120,0,20)
+    label.Position = UDim2.new(1,-160,0.1,y)
+    label.BackgroundTransparency = 1
+    label.Text = name
+    label.TextColor3 = Color3.fromRGB(170,0,255)
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 14
+
+    local btn = Instance.new("TextButton", toggles)
+    btn.Size = UDim2.new(0,22,0,22)
+    btn.Position = UDim2.new(1,-70,0.1,y)
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(1,0)
+
+    local state = default
+    local function update()
+        if state then
+            btn.BackgroundColor3 = Color3.fromRGB(170,0,255)
+            btn.Text = "✔"
+        else
+            btn.BackgroundColor3 = Color3.fromRGB(100,100,100)
+            btn.Text = ""
+        end
+    end
+    update()
+
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        update()
+        callback(state)
+    end)
+end
+
+-- 🛡️ Anti Kick
+local AutoReset = true
+createToggle("Anti Kick",1,true,function(st) AutoReset = st end)
+task.spawn(function()
+    while task.wait(30) do
+        if AutoReset and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            LocalPlayer.Character:BreakJoints()
+        end
+    end
+end)
+
+-- 👻 Invisible
+local Invisible = false
+local function setInvisible(st)
+    if LocalPlayer.Character then
+        for _,p in ipairs(LocalPlayer.Character:GetDescendants()) do
+            if p:IsA("BasePart") or p:IsA("Decal") then
+                p.LocalTransparencyModifier = st and 1 or 0
+            end
+        end
+    end
+end
+createToggle("Invisible",2,false,function(st)
+    Invisible = st
+    setInvisible(st)
+end)
+LocalPlayer.CharacterAdded:Connect(function(c)
+    c:WaitForChild("HumanoidRootPart")
+    task.wait(0.3)
+    if Invisible then setInvisible(true) end
+end)
+
+-- 🗑️ Clear Map (không xóa chest)
+createToggle("Clear Map",3,false,function(st)
+    for _,o in ipairs(workspace:GetDescendants()) do
+        if (o:IsA("BasePart") or o:IsA("Decal"))
+           and not o:IsDescendantOf(LocalPlayer.Character)
+           and not o.Name:lower():find("chest") then
+            o.LocalTransparencyModifier = st and 1 or 0
+        end
+    end
+end)
