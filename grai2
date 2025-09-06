@@ -1,0 +1,305 @@
+-- ⚙️ CONFIG
+local PreferredTeam = "Pirates" -- đổi thành "Marines" nếu muốn
+
+-- Intro GUI
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+
+local intro = Instance.new("ScreenGui")
+intro.Name = "GraiIntro"
+intro.IgnoreGuiInset = true
+intro.ResetOnSpawn = false
+intro.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local bg = Instance.new("Frame", intro)
+bg.Size = UDim2.new(1,0,1,0)
+bg.BackgroundColor3 = Color3.new(0,0,0)
+bg.BackgroundTransparency = 0.3
+
+local logo = Instance.new("ImageLabel", intro)
+logo.AnchorPoint = Vector2.new(0.5,0.5)
+logo.Position = UDim2.new(0.5,0,0.5,0)
+logo.Size = UDim2.new(0,0,0,0)
+logo.BackgroundTransparency = 1
+logo.Image = "http://www.roblox.com/asset/?id=77111304194141"
+logo.ImageTransparency = 1
+
+TweenService:Create(logo, TweenInfo.new(1.5, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), {
+    Size = UDim2.new(0,200,0,200),
+    ImageTransparency = 0
+}):Play()
+
+task.spawn(function()
+    while logo.Parent do
+        logo.Rotation += 0.5
+        task.wait(0.01)
+    end
+end)
+
+local msg = Instance.new("TextLabel", intro)
+msg.AnchorPoint = Vector2.new(0.5,0)
+msg.Position = UDim2.new(0.5,0,0.75,0)
+msg.Size = UDim2.new(0,600,0,80)
+msg.BackgroundTransparency = 1
+msg.Text = "Grai Hub"
+msg.TextColor3 = Color3.fromRGB(0,255,255)
+msg.Font = Enum.Font.GothamBlack
+msg.TextScaled = true
+msg.TextStrokeTransparency = 0
+msg.TextStrokeColor3 = Color3.new(0,0,0)
+msg.TextTransparency = 1
+
+TweenService:Create(msg, TweenInfo.new(1.2), {TextTransparency=0}):Play()
+
+task.wait(4)
+TweenService:Create(logo, TweenInfo.new(1.2), {ImageTransparency=1}):Play()
+TweenService:Create(msg, TweenInfo.new(1.2), {TextTransparency=1}):Play()
+TweenService:Create(bg, TweenInfo.new(1.2), {BackgroundTransparency=1}):Play()
+task.wait(1.5)
+intro:Destroy()
+
+-- 🌌 Grai Hub Menu
+local RunService = game:GetService("RunService")
+local Stats = game:GetService("Stats")
+local CoreGui = game:GetService("CoreGui")
+
+if CoreGui:FindFirstChild("GraiHub_Menu") then
+    CoreGui.GraiHub_Menu:Destroy()
+end
+
+local gui = Instance.new("ScreenGui", CoreGui)
+gui.Name = "GraiHub_Menu"
+gui.IgnoreGuiInset = true
+gui.ResetOnSpawn = false
+
+local bg2 = Instance.new("Frame", gui)
+bg2.AnchorPoint = Vector2.new(0.5,0.5)
+bg2.Position = UDim2.new(0.5,0,0.25,0)
+bg2.Size = UDim2.new(0.6,0,0.25,0)
+bg2.BackgroundColor3 = Color3.new(0,0,0)
+bg2.BackgroundTransparency = 0.3
+Instance.new("UICorner", bg2).CornerRadius = UDim.new(0,20)
+
+local logo2 = Instance.new("ImageLabel", bg2)
+logo2.Size = UDim2.new(0,60,0,60)
+logo2.Position = UDim2.new(0.5,-30,0,10)
+logo2.BackgroundTransparency = 1
+logo2.Image = "http://www.roblox.com/asset/?id=77111304194141"
+
+local title = Instance.new("TextLabel", bg2)
+title.Size = UDim2.new(1,0,0,50)
+title.Position = UDim2.new(0,0,0,70)
+title.BackgroundTransparency = 1
+title.Text = "Grai Hub"
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 36
+title.TextColor3 = Color3.fromRGB(255,255,255)
+title.TextStrokeTransparency = 0.2
+
+local status = Instance.new("TextLabel", bg2)
+status.Size = UDim2.new(1,0,0,30)
+status.Position = UDim2.new(0,0,0,120)
+status.BackgroundTransparency = 1
+status.Text = "Status: https://discord.gg/4J2bpyhQ"
+status.Font = Enum.Font.GothamBold
+status.TextSize = 20
+status.TextColor3 = Color3.fromRGB(0,255,0)
+
+local info = Instance.new("TextLabel", bg2)
+info.Size = UDim2.new(1,0,0,30)
+info.Position = UDim2.new(0,0,0,150)
+info.BackgroundTransparency = 1
+info.Font = Enum.Font.GothamBold
+info.TextSize = 20
+info.TextColor3 = Color3.fromRGB(255,200,0)
+
+task.spawn(function()
+    while task.wait(1) do
+        local fps = math.floor(1/RunService.RenderStepped:Wait())
+        local players = #Players:GetPlayers()
+        local ping = Stats.Network.ServerStatsItem["Data Ping"]:GetValueString()
+        info.Text = string.format("FPS: %d | Players: %d | Ping: %s", fps, players, ping)
+    end
+end)
+
+-- 🌍 Auto chọn team
+task.spawn(function()
+    repeat task.wait() until LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("ChooseTeam")
+
+    local teamGui = LocalPlayer.PlayerGui.ChooseTeam
+    for _, button in pairs(teamGui.Container.Frame:GetChildren()) do
+        if button:IsA("ImageButton") and button.Name == PreferredTeam then
+            firesignal(button.MouseButton1Click)
+        end
+    end
+
+    pcall(function()
+        ReplicatedStorage.Remotes.CommF_:InvokeServer("SetTeam", PreferredTeam)
+    end)
+end)
+
+-- 🌍 Auto Chest Farm + Hop
+local HttpService = game:GetService("HttpService")
+local TeleportService = game:GetService("TeleportService")
+local PlaceID = game.PlaceId
+local AllIDs = {}
+local foundAnything = ""
+local actualHour = os.date("!*t").hour
+
+pcall(function()
+    AllIDs = HttpService:JSONDecode(readfile("NotSameServers.json"))
+end)
+if type(AllIDs) ~= "table" then
+    AllIDs = {actualHour}
+    writefile("NotSameServers.json", HttpService:JSONEncode(AllIDs))
+end
+
+local function getChar()
+    return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+end
+
+local function getChests()
+    local chests = {}
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("Part") and obj.Name:lower():find("chest") and obj:FindFirstChild("TouchInterest") then
+            table.insert(chests, obj)
+        end
+    end
+    local root = getChar():FindFirstChild("HumanoidRootPart")
+    if root then
+        table.sort(chests,function(a,b)
+            return (root.Position - a.Position).Magnitude < (root.Position - b.Position).Magnitude
+        end)
+    end
+    return chests
+end
+
+local function Teleport(cframe)
+    local root = getChar().HumanoidRootPart
+    for _,v in pairs(getChar():GetChildren()) do
+        if v:IsA("BasePart") then v.CanCollide = false end
+    end
+    root.CFrame = cframe + Vector3.new(0,3,0)
+end
+
+task.spawn(function()
+    while task.wait(1) do
+        local chests = getChests()
+        if #chests > 0 then
+            Teleport(chests[1].CFrame)
+        end
+    end
+end)
+
+local function TPReturner()
+    local site
+    if foundAnything == "" then
+        site = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..PlaceID.."/servers/Public?sortOrder=Asc&limit=100"))
+    else
+        site = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..PlaceID.."/servers/Public?sortOrder=Asc&limit=100&cursor="..foundAnything))
+    end
+    if site.nextPageCursor then
+        foundAnything = site.nextPageCursor
+    end
+    for _,v in pairs(site.data) do
+        if v.playing < v.maxPlayers then
+            local id = tostring(v.id)
+            if not table.find(AllIDs,id) then
+                table.insert(AllIDs,id)
+                writefile("NotSameServers.json", HttpService:JSONEncode(AllIDs))
+                TeleportService:TeleportToPlaceInstance(PlaceID, id, LocalPlayer)
+                task.wait(4)
+            end
+        end
+    end
+end
+
+task.delay(180,function()
+    while task.wait(3) do
+        pcall(TPReturner)
+    end
+end)
+
+-- ⚙️ Toggles
+if CoreGui:FindFirstChild("Grai_Toggles") then
+    CoreGui.Grai_Toggles:Destroy()
+end
+
+local gui2 = Instance.new("ScreenGui", CoreGui)
+gui2.Name = "Grai_Toggles"
+
+local function createToggle(name, posY, default, callback)
+    local label = Instance.new("TextLabel", gui2)
+    label.Size = UDim2.new(0,120,0,15)
+    label.Position = UDim2.new(1,-150,0.1,posY)
+    label.BackgroundTransparency = 1
+    label.Text = name
+    label.TextColor3 = Color3.fromRGB(170,0,255)
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 12
+
+    local btn = Instance.new("TextButton", gui2)
+    btn.Size = UDim2.new(0,20,0,20)
+    btn.Position = UDim2.new(1,-70,0.1,posY+20)
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(1,0)
+
+    local state = default
+    local function update()
+        if state then
+            btn.BackgroundColor3 = Color3.fromRGB(170,0,255)
+            btn.Text = "✔"
+        else
+            btn.BackgroundColor3 = Color3.fromRGB(100,100,100)
+            btn.Text = ""
+        end
+    end
+    update()
+
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        update()
+        callback(state)
+    end)
+end
+
+local AutoReset = true
+createToggle("Anti Kick",0,true,function(st) AutoReset = st end)
+task.spawn(function()
+    while task.wait(15) do
+        if AutoReset and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            LocalPlayer.Character.Humanoid.Health = 0
+        end
+    end
+end)
+
+local Invisible = false
+local function setInvisible(st)
+    if LocalPlayer.Character then
+        for _,p in ipairs(LocalPlayer.Character:GetDescendants()) do
+            if p:IsA("BasePart") or p:IsA("Decal") then
+                p.LocalTransparencyModifier = st and 1 or 0
+            end
+        end
+    end
+end
+createToggle("Invisible",60,false,function(st)
+    Invisible = st
+    setInvisible(st)
+end)
+LocalPlayer.CharacterAdded:Connect(function(c)
+    task.wait(0.3)
+    if Invisible then setInvisible(true) end
+end)
+
+createToggle("Clear Map",120,false,function(st)
+    for _,o in ipairs(workspace:GetDescendants()) do
+        if (o:IsA("BasePart") or o:IsA("Decal")) and not o:IsDescendantOf(LocalPlayer.Character) then
+            o.LocalTransparencyModifier = st and 1 or 0
+        end
+    end
+end)
