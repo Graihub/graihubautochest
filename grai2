@@ -1,6 +1,18 @@
 -- ⚙️ CONFIG
-local PreferredTeam = "Pirates" -- đổi thành "Marines" nếu muốn
+local PreferredTeam = "Pirates" -- đổi thành "Marines" nếu muốn auto chọn Marines
 
+-- 📌 Lấy service
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+
+-- 📌 Tìm Remote chọn team
+local remotes = ReplicatedStorage:WaitForChild("Remotes")
+local chooseTeam = remotes:WaitForChild("CommF_")
+
+-- 📌 Gửi lệnh chọn team
+task.wait(1) -- đợi game load
+chooseTeam:InvokeServer("SetTeam", PreferredTeam)
 -- Services
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -11,61 +23,6 @@ local RunService = game:GetService("RunService")
 local Stats = game:GetService("Stats")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
-
--- ================= INTRO =================
-local intro = Instance.new("ScreenGui")
-intro.Name = "GraiIntro"
-intro.IgnoreGuiInset = true
-intro.ResetOnSpawn = false
-intro.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
-local bg = Instance.new("Frame", intro)
-bg.Size = UDim2.new(1,0,1,0)
-bg.BackgroundColor3 = Color3.new(0,0,0)
-bg.BackgroundTransparency = 0.3
-
-local logo = Instance.new("ImageLabel", intro)
-logo.AnchorPoint = Vector2.new(0.5,0.5)
-logo.Position = UDim2.new(0.5,0,0.5,0)
-logo.Size = UDim2.new(0,0,0,0)
-logo.BackgroundTransparency = 1
-logo.Image = "http://www.roblox.com/asset/?id=77111304194141"
-logo.ImageTransparency = 1
-
-TweenService:Create(logo, TweenInfo.new(1.5, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), {
-    Size = UDim2.new(0,200,0,200),
-    ImageTransparency = 0
-}):Play()
-
-task.spawn(function()
-    while logo.Parent do
-        logo.Rotation += 0.5
-        task.wait(0.01)
-    end
-end)
-
-local msg = Instance.new("TextLabel", intro)
-msg.AnchorPoint = Vector2.new(0.5,0)
-msg.Position = UDim2.new(0.5,0,0.75,0)
-msg.Size = UDim2.new(0,600,0,80)
-msg.BackgroundTransparency = 1
-msg.Text = "Grai Hub"
-msg.TextColor3 = Color3.fromRGB(0,255,255)
-msg.Font = Enum.Font.GothamBlack
-msg.TextScaled = true
-msg.TextStrokeTransparency = 0
-msg.TextStrokeColor3 = Color3.new(0,0,0)
-msg.TextTransparency = 1
-
-TweenService:Create(msg, TweenInfo.new(1.2), {TextTransparency=0}):Play()
-
-task.wait(4)
-TweenService:Create(logo, TweenInfo.new(1.2), {ImageTransparency=1}):Play()
-TweenService:Create(msg, TweenInfo.new(1.2), {TextTransparency=1}):Play()
-TweenService:Create(bg, TweenInfo.new(1.2), {BackgroundTransparency=1}):Play()
-task.wait(1.5)
-intro:Destroy()
-
 -- ================= MENU =================
 if CoreGui:FindFirstChild("GraiHub_Menu") then
     CoreGui.GraiHub_Menu:Destroy()
