@@ -184,8 +184,9 @@ local function TPReturner()
     Rejoin()
 end
 
-task.delay(180,function()
-    while task.wait(3) do
+-- Sau 60 giây thì hop server 1 lần
+task.spawn(function()
+    while task.wait(60) do
         pcall(TPReturner)
     end
 end)
