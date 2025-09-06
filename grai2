@@ -124,14 +124,15 @@ task.spawn(function()
     end
 end)
 
--- 🌍 Auto chọn team
+-- 🌍 Auto chọn phe
 task.spawn(function()
     repeat task.wait() until LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("ChooseTeam")
-
     local teamGui = LocalPlayer.PlayerGui.ChooseTeam
+
     for _, button in pairs(teamGui.Container.Frame:GetChildren()) do
         if button:IsA("ImageButton") and button.Name == PreferredTeam then
             firesignal(button.MouseButton1Click)
+            break
         end
     end
 
@@ -140,7 +141,7 @@ task.spawn(function()
     end)
 end)
 
--- 🌍 Auto Chest Farm + Hop
+-- 🌍 Auto Chest Farm
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local PlaceID = game.PlaceId
@@ -193,6 +194,13 @@ task.spawn(function()
     end
 end)
 
+-- 🌍 Auto Hop + Rejoin
+local function Rejoin()
+    pcall(function()
+        TeleportService:Teleport(PlaceID, LocalPlayer)
+    end)
+end
+
 local function TPReturner()
     local site
     if foundAnything == "" then
@@ -214,11 +222,20 @@ local function TPReturner()
             end
         end
     end
+    Rejoin()
 end
 
+-- bắt đầu hop sau 3 phút
 task.delay(180,function()
     while task.wait(3) do
         pcall(TPReturner)
+    end
+end)
+
+-- auto rejoin khi teleport fail
+LocalPlayer.OnTeleport:Connect(function(State)
+    if State == Enum.TeleportState.Failed then
+        Rejoin()
     end
 end)
 
