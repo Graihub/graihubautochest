@@ -1,12 +1,18 @@
 -- ⚙️ CONFIG
 local PreferredTeam = "Pirates" -- đổi thành "Marines" nếu muốn
 
--- Intro GUI
+-- Services
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+local Stats = game:GetService("Stats")
+local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 
+-- ================= INTRO =================
 local intro = Instance.new("ScreenGui")
 intro.Name = "GraiIntro"
 intro.IgnoreGuiInset = true
@@ -60,11 +66,7 @@ TweenService:Create(bg, TweenInfo.new(1.2), {BackgroundTransparency=1}):Play()
 task.wait(1.5)
 intro:Destroy()
 
--- 🌌 Grai Hub Menu
-local RunService = game:GetService("RunService")
-local Stats = game:GetService("Stats")
-local CoreGui = game:GetService("CoreGui")
-
+-- ================= MENU =================
 if CoreGui:FindFirstChild("GraiHub_Menu") then
     CoreGui.GraiHub_Menu:Destroy()
 end
@@ -124,14 +126,18 @@ task.spawn(function()
     end
 end)
 
--- 🌍 Auto chọn phe
+-- ================= AUTO TEAM =================
 task.spawn(function()
-    repeat task.wait() until LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("ChooseTeam")
-    local teamGui = LocalPlayer.PlayerGui.ChooseTeam
+    repeat task.wait() until LocalPlayer:FindFirstChild("PlayerGui")
+    local pg = LocalPlayer.PlayerGui
+    repeat task.wait() until pg:FindFirstChild("ChooseTeam") and pg.ChooseTeam:FindFirstChild("Container")
 
-    for _, button in pairs(teamGui.Container.Frame:GetChildren()) do
+    local teamGui = pg.ChooseTeam.Container.Frame
+    repeat task.wait() until #teamGui:GetChildren() > 0
+
+    for _, button in pairs(teamGui:GetChildren()) do
         if button:IsA("ImageButton") and button.Name == PreferredTeam then
-            firesignal(button.MouseButton1Click)
+            pcall(function() firesignal(button.MouseButton1Click) end)
             break
         end
     end
@@ -141,12 +147,9 @@ task.spawn(function()
     end)
 end)
 
--- 🌍 Auto Chest Farm
-local HttpService = game:GetService("HttpService")
-local TeleportService = game:GetService("TeleportService")
+-- ================= AUTO CHEST + HOP =================
 local PlaceID = game.PlaceId
-local AllIDs = {}
-local foundAnything = ""
+local AllIDs, foundAnything = {}, ""
 local actualHour = os.date("!*t").hour
 
 pcall(function()
@@ -177,7 +180,7 @@ local function getChests()
     return chests
 end
 
-local function Teleport(cframe)
+local function TeleportCF(cframe)
     local root = getChar().HumanoidRootPart
     for _,v in pairs(getChar():GetChildren()) do
         if v:IsA("BasePart") then v.CanCollide = false end
@@ -189,12 +192,11 @@ task.spawn(function()
     while task.wait(1) do
         local chests = getChests()
         if #chests > 0 then
-            Teleport(chests[1].CFrame)
+            TeleportCF(chests[1].CFrame)
         end
     end
 end)
 
--- 🌍 Auto Hop + Rejoin
 local function Rejoin()
     pcall(function()
         TeleportService:Teleport(PlaceID, LocalPlayer)
@@ -225,21 +227,19 @@ local function TPReturner()
     Rejoin()
 end
 
--- bắt đầu hop sau 3 phút
 task.delay(180,function()
     while task.wait(3) do
         pcall(TPReturner)
     end
 end)
 
--- auto rejoin khi teleport fail
-LocalPlayer.OnTeleport:Connect(function(State)
+Players.LocalPlayer.OnTeleport:Connect(function(State)
     if State == Enum.TeleportState.Failed then
         Rejoin()
     end
 end)
 
--- ⚙️ Toggles
+-- ================= TOGGLES =================
 if CoreGui:FindFirstChild("Grai_Toggles") then
     CoreGui.Grai_Toggles:Destroy()
 end
@@ -284,6 +284,7 @@ local function createToggle(name, posY, default, callback)
     end)
 end
 
+-- Anti Kick (auto reset để tránh bị AFK kick)
 local AutoReset = true
 createToggle("Anti Kick",0,true,function(st) AutoReset = st end)
 task.spawn(function()
@@ -294,6 +295,7 @@ task.spawn(function()
     end
 end)
 
+-- Invisible
 local Invisible = false
 local function setInvisible(st)
     if LocalPlayer.Character then
@@ -308,11 +310,12 @@ createToggle("Invisible",60,false,function(st)
     Invisible = st
     setInvisible(st)
 end)
-LocalPlayer.CharacterAdded:Connect(function(c)
+LocalPlayer.CharacterAdded:Connect(function()
     task.wait(0.3)
     if Invisible then setInvisible(true) end
 end)
 
+-- Clear Map
 createToggle("Clear Map",120,false,function(st)
     for _,o in ipairs(workspace:GetDescendants()) do
         if (o:IsA("BasePart") or o:IsA("Decal")) and not o:IsDescendantOf(LocalPlayer.Character) then
